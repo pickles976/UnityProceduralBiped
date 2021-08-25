@@ -33,7 +33,7 @@ public class LegController : MonoBehaviour
     public LayerMask terrainLayer;
 
     // for checking we are inside the box
-    float _tolerance = 0.01f;
+    public float tolerance = 0.05f;
 
     Vector3 _vel = Vector3.zero;
     Vector3 _oldVel = Vector3.zero;
@@ -109,19 +109,36 @@ public class LegController : MonoBehaviour
 
     // Update the corners of the box
     void UpdateCorners(){
-        float _x = (stanceWidth + (Mathf.Abs(_vel.x) * strafeScale / 2));
-        float _z = (stanceLength + (Mathf.Abs(_vel.z) * strideScale / 2));
-        _topLeft = _com - Vector3.right * _x + Vector3.forward * _z;
-        _topRight = _com + Vector3.right * _x + Vector3.forward * _z;
-        _bottomLeft = _com - Vector3.right * _x - Vector3.forward * _z;
-        _bottomRight = _com + Vector3.right * _x - Vector3.forward * _z;
+
+        // get an un-rotated velocity vector
+        Quaternion unRotate = Quaternion.Euler(0,-transform.rotation.eulerAngles.y,0);
+        Vector3 _rotVel = Rotators.Rotated(_vel,unRotate,transform.up);
+
+        // get width and length of the box
+        float _x = (stanceWidth + (Mathf.Abs(_rotVel.x) * strafeScale / 2));
+        float _z = (stanceLength + (Mathf.Abs(_rotVel.z) * strideScale / 2));
+
+        _topLeft = -Vector3.right * _x + Vector3.forward * _z;
+        _topRight = Vector3.right * _x + Vector3.forward * _z;
+        _bottomLeft = -Vector3.right * _x - Vector3.forward * _z;
+        _bottomRight = Vector3.right * _x - Vector3.forward * _z;
+
+        _topLeft = Rotators.Rotated(_topLeft,transform.rotation,transform.up);
+        _topRight = Rotators.Rotated(_topRight,transform.rotation,transform.up);
+        _bottomLeft = Rotators.Rotated(_bottomLeft,transform.rotation,transform.up);
+        _bottomRight = Rotators.Rotated(_bottomRight,transform.rotation,transform.up);
+
+        _topLeft += _com;
+        _topRight += _com;
+        _bottomLeft += _com;
+        _bottomRight += _com;
     }
 
     void OnDrawGizmos(){
 
         // Draw footbox
-        Gizmos.color = new Color(1, 0, 0, 0.5f);
-        Gizmos.DrawCube(_com, new Vector3((stanceWidth * 2) + Mathf.Abs(_vel.x) * strafeScale, 0.1f, (stanceLength * 2) + Mathf.Abs(_vel.z) * strideScale));
+        // Gizmos.color = new Color(1, 0, 0, 0.5f);
+        // Gizmos.DrawCube(_com, new Vector3((stanceWidth * 2) + Mathf.Abs(_vel.x) * strafeScale, 0.1f, (stanceLength * 2) + Mathf.Abs(_vel.z) * strideScale));
 
         
         // Center of mass
@@ -158,9 +175,25 @@ public class LegController : MonoBehaviour
 
     // Checks if a foot is inside of the box
     bool FootInsideBox(GameObject foot){
-        float x = foot.transform.position.x;
-        float z = foot.transform.position.z;
-        if(x >= _topLeft.x - _tolerance && x <= _topRight.x + _tolerance && z <= _topLeft.z + _tolerance && z >= _bottomLeft.z - _tolerance){
+
+        // get an unrotation Quaternion
+        Quaternion unRotate = Quaternion.Euler(0,-transform.rotation.eulerAngles.y,0);
+
+        Vector3 _tl = _topLeft - _com;
+        Vector3 _tr = _topRight - _com;
+        Vector3 _bl = _bottomLeft - _com;
+
+        _tl = Rotators.Rotated(_tl,unRotate,transform.up);
+        _tr = Rotators.Rotated(_tr,unRotate,transform.up);
+        _bl = Rotators.Rotated(_bl,unRotate,transform.up);
+
+        Vector3 _rotFoot = foot.transform.position - _com;
+        _rotFoot = Rotators.Rotated(_rotFoot,unRotate,transform.up);
+
+        float x = _rotFoot.x;
+        float z = _rotFoot.z;
+
+        if(x >= _tl.x - tolerance && x <= _tr.x + tolerance && z <= _tl.z + tolerance && z >= _bl.z - tolerance){
             return true;
         }
         return false;
@@ -171,13 +204,17 @@ public class LegController : MonoBehaviour
     Vector3 LeftFootMapping(){
         Vector3 footPos = leftFoot.transform.position;
 
-        if(_vel.z >= 0){
-            if(_vel.x > 0){
+        // get an unrotation Quaternion
+        Quaternion unRotate = Quaternion.Euler(0,-transform.rotation.eulerAngles.y,0);
+        Vector3 _rotVel = Rotators.Rotated(_vel,unRotate,transform.up);
+
+        if(_rotVel.z >= 0){
+            if(_rotVel.x > 0){
                 return _topRight;
             }
             return _topLeft;
         }
-        if(_vel.x > 0){
+        if(_rotVel.x > 0){
             return _bottomRight;
         }
         return _bottomLeft;
@@ -185,13 +222,18 @@ public class LegController : MonoBehaviour
 
     Vector3 RightFootMapping(){
         Vector3 footPos = rightFoot.transform.position;
-        if(_vel.z >= 0){
-            if(_vel.x < 0){
+
+        // get an unrotation Quaternion
+        Quaternion unRotate = Quaternion.Euler(0,-transform.rotation.eulerAngles.y,0);
+        Vector3 _rotVel = Rotators.Rotated(_vel,unRotate,transform.up);
+
+        if(_rotVel.z >= 0){
+            if(_rotVel.x < 0){
                 return _topLeft;
             }
             return _topRight;
         }
-        if(_vel.x < 0){
+        if(_rotVel.x < 0){
             return _bottomLeft;
         }
         return _bottomRight;
