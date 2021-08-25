@@ -54,8 +54,11 @@ public class LegController : MonoBehaviour
         _oldPos = transform.position;
         _com = GetCenterOfMass();
         UpdateCorners();
+        
         leftTarget = LeftFootMapping();
         rightTarget = RightFootMapping();
+
+        // Initialize IK variables
         leftFootIK = leftFoot.GetComponent<IKFootSolver>();
         rightFootIK = rightFoot.GetComponent<IKFootSolver>();
         leftFootIK.SetBaseSpeed(stepSpeed);
@@ -69,7 +72,9 @@ public class LegController : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate()
     {
+        // get previous velocity
         _oldVel = _vel;
+
         // get Velocity
         _vel = transform.position - _oldPos;
         _vel /= Time.fixedDeltaTime;
@@ -85,11 +90,11 @@ public class LegController : MonoBehaviour
         // update the box corners
         UpdateCorners();
 
+        // Move the feet
         if(!FootInsideBox(leftFoot) && rightFootIK.IsGrounded())
         {
             if(LeftFootFurther()){
                 leftTarget = LeftFootMapping();
-                // move left foot
                 leftFootIK.UpdatePosition(leftTarget);
             }
         }
@@ -131,6 +136,7 @@ public class LegController : MonoBehaviour
         Gizmos.DrawLine(_bottomLeft,transform.position);
     }
 
+    // Get future Center of mass based on instantaneous velocity
     Vector3 GetCenterOfMass(){
         Ray ray = new Ray(transform.position + new Vector3(_vel.x * strafeSize,0,_vel.z * strideSize), Vector3.down);
         if (Physics.Raycast(ray, out RaycastHit info,10,terrainLayer.value))
@@ -160,6 +166,7 @@ public class LegController : MonoBehaviour
         return false;
     }
     
+    // TODO: FIND A WAY TO NOT HARDCODE THESE
     // Tells us what the foot's destination should be
     Vector3 LeftFootMapping(){
         Vector3 footPos = leftFoot.transform.position;
