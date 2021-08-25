@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 public class LegController : MonoBehaviour
 {
@@ -34,6 +35,9 @@ public class LegController : MonoBehaviour
 
     // for checking we are inside the box
     public float tolerance = 0.05f;
+
+    // angle determining what is considered walking "diagonal"
+    public float sideWalkThreshold = 25f;
 
     Vector3 _vel = Vector3.zero;
     Vector3 _oldVel = Vector3.zero;
@@ -93,6 +97,7 @@ public class LegController : MonoBehaviour
         // Move the feet
         if(!FootInsideBox(leftFoot) && rightFootIK.IsGrounded())
         {
+            // make sure that we are alternating steps
             if(LeftFootFurther()){
                 leftTarget = LeftFootMapping();
                 leftFootIK.UpdatePosition(leftTarget);
@@ -102,7 +107,6 @@ public class LegController : MonoBehaviour
         if(!FootInsideBox(rightFoot) && leftFootIK.IsGrounded())
         {
             rightTarget = RightFootMapping();
-            // move left foot
             rightFootIK.UpdatePosition(rightTarget);
         }
     }
@@ -136,11 +140,6 @@ public class LegController : MonoBehaviour
 
     void OnDrawGizmos(){
 
-        // Draw footbox
-        // Gizmos.color = new Color(1, 0, 0, 0.5f);
-        // Gizmos.DrawCube(_com, new Vector3((stanceWidth * 2) + Mathf.Abs(_vel.x) * strafeScale, 0.1f, (stanceLength * 2) + Mathf.Abs(_vel.z) * strideScale));
-
-        
         // Center of mass
         Gizmos.color = new Color(1, 0, 0, 1f);
         Gizmos.DrawLine(transform.position + Vector3.up, transform.position - Vector3.up);
@@ -208,13 +207,18 @@ public class LegController : MonoBehaviour
         Quaternion unRotate = Quaternion.Euler(0,-transform.rotation.eulerAngles.y,0);
         Vector3 _rotVel = Rotators.Rotated(_vel,unRotate,transform.up);
 
+        float thresh = _rotVel.magnitude * Mathf.Sin(Mathf.Deg2Rad * sideWalkThreshold);
+
         if(_rotVel.z >= 0){
-            if(_rotVel.x > 0){
+            if(_rotVel.x > thresh){
                 return _topRight;
+            }
+            if(_rotVel.x < -thresh){
+                return _bottomLeft;
             }
             return _topLeft;
         }
-        if(_rotVel.x > 0){
+        if(_rotVel.x > thresh){
             return _bottomRight;
         }
         return _bottomLeft;
@@ -227,15 +231,41 @@ public class LegController : MonoBehaviour
         Quaternion unRotate = Quaternion.Euler(0,-transform.rotation.eulerAngles.y,0);
         Vector3 _rotVel = Rotators.Rotated(_vel,unRotate,transform.up);
 
+        float thresh = _vel.magnitude * Mathf.Sin(Mathf.Deg2Rad * sideWalkThreshold);
+
         if(_rotVel.z >= 0){
-            if(_rotVel.x < 0){
+            if(_rotVel.x < -thresh){
                 return _topLeft;
+            }
+            if(_rotVel.x > thresh){
+                return _bottomRight;
             }
             return _topRight;
         }
-        if(_rotVel.x < 0){
+        if(_rotVel.x < -thresh){
             return _bottomLeft;
         }
         return _bottomRight;
     }
+
+    // just return the second-furthest possible foot position lol
+    // Vector3 FootMapping(GameObject foot){
+    //     Vector3 footPos = foot.transform.position;
+
+    //     float tl = (footPos - _topLeft).magnitude;
+    //     float tr = (footPos - _topRight).magnitude;
+    //     float bl = (footPos - _bottomLeft).magnitude;
+    //     float br = (footPos - _bottomRight).magnitude;
+
+    //     List<Tuple<float,Vector3>> cList = new List<Tuple<float,Vector3>>();
+    //     cList.Add(new Tuple<float,Vector3>(tl, _topLeft));
+    //     cList.Add(new Tuple<float,Vector3>(tr, _topRight));
+    //     cList.Add(new Tuple<float,Vector3>(bl, _bottomLeft));
+    //     cList.Add(new Tuple<float,Vector3>(br, _bottomRight));
+
+    //     cList.Sort((x,y) => y.Item1.CompareTo(x.Item1));
+
+    //     return cList[1].Item2;
+
+    // }
 }

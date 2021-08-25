@@ -25,7 +25,7 @@ public class IKFootSolver : MonoBehaviour
         grounded = true;
     }
 
-    void Update()
+    void LateUpdate()
     {
         transform.position = currentPosition;
 
@@ -77,8 +77,6 @@ public class IKFootSolver : MonoBehaviour
 
         if(grounded){
             Handles.Label(transform.position,"Grounded");
-        }else{
-            Handles.Label(transform.position,"Not Grounded");
         }
     }
 
