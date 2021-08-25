@@ -52,11 +52,14 @@ public class LegController : MonoBehaviour
     // Velocity-adjusted center-of-mass
     Vector3 _com;
 
+    Vector3 _oldCom;
+
     // Start is called before the first frame update
     void Start()
     {
         _oldPos = transform.position;
         _com = GetCenterOfMass();
+        _oldCom = _com;
         UpdateCorners();
         
         leftTarget = LeftFootMapping();
@@ -91,8 +94,14 @@ public class LegController : MonoBehaviour
         // get center of mass
         _com = GetCenterOfMass();
 
-        // update the box corners
-        UpdateCorners();
+        // update the box when we start moving
+        if(_oldVel.magnitude == 0 && _vel.magnitude != 0){
+            UpdateCorners();
+        }
+
+        if(Mathf.Abs(_oldCom.x - _com.x) > stanceWidth || Mathf.Abs(_oldCom.z - _com.z) > stanceLength){
+            UpdateCorners();
+        }
 
         // Move the feet
         if(!FootInsideBox(leftFoot) && rightFootIK.IsGrounded())
@@ -136,6 +145,8 @@ public class LegController : MonoBehaviour
         _topRight += _com;
         _bottomLeft += _com;
         _bottomRight += _com;
+
+        _oldCom = _com;
     }
 
     void OnDrawGizmos(){
@@ -213,9 +224,6 @@ public class LegController : MonoBehaviour
             if(_rotVel.x > thresh){
                 return _topRight;
             }
-            if(_rotVel.x < -thresh){
-                return _bottomLeft;
-            }
             return _topLeft;
         }
         if(_rotVel.x > thresh){
@@ -236,9 +244,6 @@ public class LegController : MonoBehaviour
         if(_rotVel.z >= 0){
             if(_rotVel.x < -thresh){
                 return _topLeft;
-            }
-            if(_rotVel.x > thresh){
-                return _bottomRight;
             }
             return _topRight;
         }

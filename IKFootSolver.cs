@@ -17,7 +17,7 @@ public class IKFootSolver : MonoBehaviour
     private Vector3 currentPosition;
 
     private float bodySpeed;
-    private bool grounded;
+    public bool grounded;
 
     void Start(){
         bodySpeed = 0;
@@ -31,7 +31,7 @@ public class IKFootSolver : MonoBehaviour
 
         if(lerp < 1){
             Vector3 footPos = Vector3.Lerp(currentPosition,target,lerp);
-            // footPos.y = Mathf.Sin(lerp * Mathf.PI) * stepHeight;
+            footPos.y = Mathf.Sin(lerp * Mathf.PI) * stepHeight;
             currentPosition = footPos;
             lerp += Time.deltaTime * (stepSpeed + (1 + bodySpeed));
             grounded = false;
