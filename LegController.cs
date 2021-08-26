@@ -95,8 +95,6 @@ public class LegController : MonoBehaviour
         _vel /= Time.deltaTime;
         _oldPos = transform.position;
 
-        _oldRot = transform.rotation;
-
         // set foot animation speed
         leftFootIK.SetSpeed(_vel.magnitude);
         rightFootIK.SetSpeed(_vel.magnitude);
@@ -119,6 +117,8 @@ public class LegController : MonoBehaviour
             UpdateCorners();
         }
 
+        _oldRot = transform.rotation;
+
         if(_vel.magnitude == 0){
             //if we stop moving, regain our footing
             if(_oldVel.magnitude > 0){
@@ -138,7 +138,7 @@ public class LegController : MonoBehaviour
             {
                 // Move the feet while stationary or rotating
                 if(leftsTurn){
-                    if((leftFoot.transform.position - LeftFootMapping()).magnitude > stanceLength && rightFootIK.IsGrounded())
+                    if((leftFoot.transform.position - LeftFootMapping()).magnitude > stanceWidth && rightFootIK.IsGrounded())
                     {
                         // make sure that we are alternating steps
                         leftTarget = LeftFootMapping();
@@ -147,7 +147,7 @@ public class LegController : MonoBehaviour
                         rightsTurn = true;
                     }
                 }else{
-                    if((rightFoot.transform.position - RightFootMapping()).magnitude > stanceLength && leftFootIK.IsGrounded())
+                    if((rightFoot.transform.position - RightFootMapping()).magnitude > stanceWidth && leftFootIK.IsGrounded())
                     {
                         rightTarget = RightFootMapping();
                         rightFootIK.UpdatePosition(rightTarget);
