@@ -52,6 +52,10 @@ public class LegController : MonoBehaviour
     // Velocity-adjusted center-of-mass
     Vector3 _com;
 
+    //
+    bool leftsTurn = true;
+    bool rightsTurn = true;
+
     Vector3 _oldCom;
 
     // Start is called before the first frame update
@@ -77,14 +81,14 @@ public class LegController : MonoBehaviour
     }
 
     // Update is called once per frame
-    void FixedUpdate()
+    void Update()
     {
         // get previous velocity
         _oldVel = _vel;
 
         // get Velocity
         _vel = transform.position - _oldPos;
-        _vel /= Time.fixedDeltaTime;
+        _vel /= Time.deltaTime;
         _oldPos = transform.position;
 
         // set foot animation speed
@@ -99,24 +103,44 @@ public class LegController : MonoBehaviour
             UpdateCorners();
         }
 
+        // if we move far enough, update corners
         if(Mathf.Abs(_oldCom.x - _com.x) > stanceWidth || Mathf.Abs(_oldCom.z - _com.z) > stanceLength){
             UpdateCorners();
         }
 
-        // Move the feet
-        if(!FootInsideBox(leftFoot) && rightFootIK.IsGrounded())
-        {
-            // make sure that we are alternating steps
+        //if we stop moving, regain our footing
+        if(_oldVel.magnitude > 0 && _vel.magnitude == 0){
             if(LeftFootFurther()){
                 leftTarget = LeftFootMapping();
                 leftFootIK.UpdatePosition(leftTarget);
+                leftsTurn = false;
+                rightsTurn = true;
+            }else{
+                rightTarget = RightFootMapping();
+                rightFootIK.UpdatePosition(rightTarget);
+                leftsTurn = true;
+                rightsTurn = false;
             }
         }
 
-        if(!FootInsideBox(rightFoot) && leftFootIK.IsGrounded())
-        {
-            rightTarget = RightFootMapping();
-            rightFootIK.UpdatePosition(rightTarget);
+        // Move the feet
+        if(leftsTurn){
+            if(!FootInsideBox(leftFoot) && rightFootIK.IsGrounded())
+            {
+                // make sure that we are alternating steps
+                leftTarget = LeftFootMapping();
+                leftFootIK.UpdatePosition(leftTarget);
+                leftsTurn = false;
+                rightsTurn = true;
+            }
+        }else{
+            if(!FootInsideBox(rightFoot) && leftFootIK.IsGrounded())
+            {
+                rightTarget = RightFootMapping();
+                rightFootIK.UpdatePosition(rightTarget);
+                leftsTurn = true;
+                rightsTurn = false;
+            }
         }
     }
 
@@ -131,36 +155,25 @@ public class LegController : MonoBehaviour
         float _x = (stanceWidth + (Mathf.Abs(_rotVel.x) * strafeScale / 2));
         float _z = (stanceLength + (Mathf.Abs(_rotVel.z) * strideScale / 2));
 
+        // get positions of corners
         _topLeft = -Vector3.right * _x + Vector3.forward * _z;
         _topRight = Vector3.right * _x + Vector3.forward * _z;
         _bottomLeft = -Vector3.right * _x - Vector3.forward * _z;
         _bottomRight = Vector3.right * _x - Vector3.forward * _z;
 
+        // rotate corners
         _topLeft = Rotators.Rotated(_topLeft,transform.rotation,transform.up);
         _topRight = Rotators.Rotated(_topRight,transform.rotation,transform.up);
         _bottomLeft = Rotators.Rotated(_bottomLeft,transform.rotation,transform.up);
         _bottomRight = Rotators.Rotated(_bottomRight,transform.rotation,transform.up);
 
+        // move by velocity
         _topLeft += _com;
         _topRight += _com;
         _bottomLeft += _com;
         _bottomRight += _com;
 
         _oldCom = _com;
-    }
-
-    void OnDrawGizmos(){
-
-        // Center of mass
-        Gizmos.color = new Color(1, 0, 0, 1f);
-        Gizmos.DrawLine(transform.position + Vector3.up, transform.position - Vector3.up);
-
-        // Draw corners
-        Gizmos.color = Color.blue;
-        Gizmos.DrawLine(_topLeft,transform.position);
-        Gizmos.DrawLine(_topRight,transform.position);
-        Gizmos.DrawLine(_bottomRight,transform.position);
-        Gizmos.DrawLine(_bottomLeft,transform.position);
     }
 
     // Get future Center of mass based on instantaneous velocity
@@ -189,17 +202,21 @@ public class LegController : MonoBehaviour
         // get an unrotation Quaternion
         Quaternion unRotate = Quaternion.Euler(0,-transform.rotation.eulerAngles.y,0);
 
+        // center corners at origin
         Vector3 _tl = _topLeft - _com;
         Vector3 _tr = _topRight - _com;
         Vector3 _bl = _bottomLeft - _com;
 
+        // un-rotate corners
         _tl = Rotators.Rotated(_tl,unRotate,transform.up);
         _tr = Rotators.Rotated(_tr,unRotate,transform.up);
         _bl = Rotators.Rotated(_bl,unRotate,transform.up);
 
+        // center and un-rotate foot
         Vector3 _rotFoot = foot.transform.position - _com;
         _rotFoot = Rotators.Rotated(_rotFoot,unRotate,transform.up);
 
+        // compare to bounding box as normal
         float x = _rotFoot.x;
         float z = _rotFoot.z;
 
@@ -253,24 +270,17 @@ public class LegController : MonoBehaviour
         return _bottomRight;
     }
 
-    // just return the second-furthest possible foot position lol
-    // Vector3 FootMapping(GameObject foot){
-    //     Vector3 footPos = foot.transform.position;
+        void OnDrawGizmos(){
 
-    //     float tl = (footPos - _topLeft).magnitude;
-    //     float tr = (footPos - _topRight).magnitude;
-    //     float bl = (footPos - _bottomLeft).magnitude;
-    //     float br = (footPos - _bottomRight).magnitude;
+        // Center of mass
+        Gizmos.color = new Color(1, 0, 0, 1f);
+        Gizmos.DrawLine(transform.position + Vector3.up, transform.position - Vector3.up);
 
-    //     List<Tuple<float,Vector3>> cList = new List<Tuple<float,Vector3>>();
-    //     cList.Add(new Tuple<float,Vector3>(tl, _topLeft));
-    //     cList.Add(new Tuple<float,Vector3>(tr, _topRight));
-    //     cList.Add(new Tuple<float,Vector3>(bl, _bottomLeft));
-    //     cList.Add(new Tuple<float,Vector3>(br, _bottomRight));
-
-    //     cList.Sort((x,y) => y.Item1.CompareTo(x.Item1));
-
-    //     return cList[1].Item2;
-
-    // }
+        // Draw corners
+        Gizmos.color = Color.blue;
+        Gizmos.DrawLine(_topLeft,transform.position);
+        Gizmos.DrawLine(_topRight,transform.position);
+        Gizmos.DrawLine(_bottomRight,transform.position);
+        Gizmos.DrawLine(_bottomLeft,transform.position);
+    }
 }

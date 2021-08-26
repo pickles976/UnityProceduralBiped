@@ -13,38 +13,37 @@ public class IKFootSolver : MonoBehaviour
     private Vector3 target;
 
     private float lerp;
-    private Vector3 oldPosition;
     private Vector3 currentPosition;
+    Vector3 oldPos;
 
     private float bodySpeed;
     public bool grounded;
 
     void Start(){
         bodySpeed = 0;
-        oldPosition = transform.position;
         grounded = true;
+        oldPos = transform.position;
     }
 
-    void LateUpdate()
+    void Update()
     {
         transform.position = currentPosition;
 
         if(lerp < 1){
-            Vector3 footPos = Vector3.Lerp(currentPosition,target,lerp);
+            Vector3 footPos = Vector3.Slerp(oldPos,target,lerp);
             footPos.y = Mathf.Sin(lerp * Mathf.PI) * stepHeight;
             currentPosition = footPos;
             lerp += Time.deltaTime * (stepSpeed + (1 + bodySpeed));
             grounded = false;
         }else{
-            oldPosition = target;
             currentPosition = target;
             grounded = true;
         }
     }
 
     public void UpdatePosition(Vector3 targetPosition){
-        target = targetPosition;
         target = GetNewPosition(targetPosition);
+        oldPos = transform.position;
     }
 
     Vector3 GetNewPosition(Vector3 target){
