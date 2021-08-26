@@ -58,6 +58,8 @@ public class LegController : MonoBehaviour
 
     Vector3 _oldCom;
 
+    Quaternion _oldRot;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -65,6 +67,8 @@ public class LegController : MonoBehaviour
         _com = GetCenterOfMass();
         _oldCom = _com;
         UpdateCorners();
+
+        _oldRot = transform.rotation;
         
         leftTarget = LeftFootMapping();
         rightTarget = RightFootMapping();
@@ -91,6 +95,8 @@ public class LegController : MonoBehaviour
         _vel /= Time.deltaTime;
         _oldPos = transform.position;
 
+        _oldRot = transform.rotation;
+
         // set foot animation speed
         leftFootIK.SetSpeed(_vel.magnitude);
         rightFootIK.SetSpeed(_vel.magnitude);
@@ -108,22 +114,54 @@ public class LegController : MonoBehaviour
             UpdateCorners();
         }
 
-        //if we stop moving, regain our footing
-        if(_oldVel.magnitude > 0 && _vel.magnitude == 0){
-            if(LeftFootFurther()){
-                leftTarget = LeftFootMapping();
-                leftFootIK.UpdatePosition(leftTarget);
-                leftsTurn = false;
-                rightsTurn = true;
-            }else{
-                rightTarget = RightFootMapping();
-                rightFootIK.UpdatePosition(rightTarget);
-                leftsTurn = true;
-                rightsTurn = false;
-            }
+        // if we are rotating
+        if(_oldRot != transform.rotation){
+            UpdateCorners();
         }
 
-        // Move the feet
+        if(_vel.magnitude == 0){
+            //if we stop moving, regain our footing
+            if(_oldVel.magnitude > 0){
+                if(LeftFootFurther()){
+                    leftTarget = LeftFootMapping();
+                    leftFootIK.UpdatePosition(leftTarget);
+                    leftsTurn = false;
+                    rightsTurn = true;
+                }else{
+                    rightTarget = RightFootMapping();
+                    rightFootIK.UpdatePosition(rightTarget);
+                    leftsTurn = true;
+                    rightsTurn = false;
+                }
+            }
+                else
+            {
+                // Move the feet while stationary or rotating
+                if(leftsTurn){
+                    if((leftFoot.transform.position - LeftFootMapping()).magnitude > stanceLength && rightFootIK.IsGrounded())
+                    {
+                        // make sure that we are alternating steps
+                        leftTarget = LeftFootMapping();
+                        leftFootIK.UpdatePosition(leftTarget);
+                        leftsTurn = false;
+                        rightsTurn = true;
+                    }
+                }else{
+                    if((rightFoot.transform.position - RightFootMapping()).magnitude > stanceLength && leftFootIK.IsGrounded())
+                    {
+                        rightTarget = RightFootMapping();
+                        rightFootIK.UpdatePosition(rightTarget);
+                        leftsTurn = true;
+                        rightsTurn = false;
+                    }
+                }
+            }
+
+        }
+
+
+
+        // Move the feet while walking
         if(leftsTurn){
             if(!FootInsideBox(leftFoot) && rightFootIK.IsGrounded())
             {
